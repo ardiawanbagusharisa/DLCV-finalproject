@@ -11,6 +11,9 @@ import torch
 import warnings
 from pycocotools.coco import COCO
 
+import warnings
+warnings.filterwarnings('ignore', message='Unable to import Axes3D')
+
 # Import utility modules
 from utils.model_utils import load_model_and_processor
 from utils.integrated_model import load_integrated_model, RainRobustRTDETR
@@ -27,16 +30,16 @@ from utils.eval_utils import (
 warnings.filterwarnings('ignore')
 
 # Configuration
-DATASET_PATH = "E:\\Python\\DLCV\\Project\\dataset\\coco_rain"
+DATASET_PATH = "E:\\Python\\DLCV\\dataset\\coco_rain"
 INTEGRATED_MODEL_PATH = "./outputs_integrated/best_integrated"  # Path to saved integrated model
-SPDNET_MODEL_PATH = "E:\\Python\\DLCV\\Project\\model_spa.pt"  # For loading architecture
+SPDNET_MODEL_PATH = "E:\\Python\\DLCV\\Project DLCV\\model_spa.pt"  # For loading architecture
 
 # SPDNet Configuration
 SPDNET_N_FEATS = 32
 SPDNET_N_RESBLOCKS = 3
 
 # Dataset sampling
-DATASET_FRACTION = 1.0  # Use 100% of dataset
+DATASET_FRACTION = 1.0  # Use 5% of dataset for faster testing
 
 CONFIDENCE_THRESHOLD = 0.3  # For visualization
 INFERENCE_THRESHOLD = 0.01  # Low threshold for COCO eval
@@ -145,13 +148,15 @@ def main():
         model=vanilla_model,
         processor=vanilla_processor,
         label_to_coco_id=label_to_coco_id,
+        class_names=COCO_CLASS_NAMES,
         device=DEVICE,
         threshold=INFERENCE_THRESHOLD,
-        images_dir=f"{DATASET_PATH}/val2017"
+        val_images_dir=f"{DATASET_PATH}/val2017"
     )
     
     print("\nVanilla RT-DETR Results:")
-    vanilla_metrics = evaluate_coco(coco_gt, vanilla_predictions)
+    vanilla_eval = evaluate_coco(vanilla_predictions, coco_gt, "vanilla_predictions.json")
+    vanilla_metrics = vanilla_eval.stats
     
     # Evaluate integrated model
     print("\n" + "=" * 80)
@@ -164,13 +169,15 @@ def main():
         model=integrated_model,
         processor=processor,
         label_to_coco_id=label_to_coco_id,
+        class_names=COCO_CLASS_NAMES,
         device=DEVICE,
         threshold=INFERENCE_THRESHOLD,
-        images_dir=f"{DATASET_PATH}/val2017"
+        val_images_dir=f"{DATASET_PATH}/val2017"
     )
     
     print("\nIntegrated Model Results:")
-    integrated_metrics = evaluate_coco(coco_gt, integrated_predictions)
+    integrated_eval = evaluate_coco(integrated_predictions, coco_gt, "integrated_predictions.json")
+    integrated_metrics = integrated_eval.stats
     
     # Compare results
     print("\n" + "=" * 80)

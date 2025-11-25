@@ -642,3 +642,40 @@ Now let's run the evaluation again with the corrected category mapping: Now we h
 
 ---
 
+_**User (2025-11-25 13:08Z)**_
+
+summarize everything that has been done in a doc file. you can update copilot instruction md if you think that you need it for future context. also, keep the main folder clean. only keep the main codes in the main folder, and the old codes to archive
+
+---
+
+_**Agent (model copilot/gemini-3-pro-preview)**_
+
+**Initiating Documentation Creation**
+
+I'm currently focused on the documentation process. My primary goal is to draft a comprehensive record of the completed work. Simultaneously, I'll review and amend the `copilot-instructions.md` file to ensure clarity for future iterations. Subsequently, I'll organize the main folder, archiving obsolete code and retaining only the essential files.
+
+
+**Defining The Scope**
+
+I've been mapping the recent SPDNet adaptation, documenting the process, and the key files involved, particularly focusing on the improved mAP. Now I'm preparing the draft summary document and beginning to draft the updates to the copilot instructions. I will address how to archive obsolete files.
+
+
+**Detailing Implementation Steps**
+
+I'm presently outlining the exact steps. I'll create the `docs/SPDNET_ADAPTATION_SUMMARY.md` document, detailing the problem, solution, and results, which involves the key scripts. After this, I'll update the copilot instructions to mirror the current project organization. Lastly, I will finalize the file archival.
+
+
+**Detailing The Current Plan**
+
+My immediate focus is on the documentation. I'll summarize the SPDNet adaptation, detailing the problem, the solution's core components, and its impact. Simultaneously, I'll update the copilot instructions to mirror the updated project setup. Finally, I will archive outdated files, maintaining only the essential scripts. I'll rename the primary training script after archiving its predecessor to enhance clarity.
+
+
+**Creating the Documentation Summary**
+
+I'm now writing `docs/SPDNET_ADAPTATION_SUMMARY.md`, where I'm summarizing the adaptation details. This includes the problem, solution, the performance gains achieved (improved mAP), and a list of key files for the user's reference.  After this, I'll update the copilot instructions. The file organization is the next item on my list.
+
+
+
+
+---
+

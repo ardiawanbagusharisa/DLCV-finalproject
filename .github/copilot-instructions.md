@@ -52,10 +52,15 @@ This project implements **rain-robust object detection** by combining de-raining
 - 🎯 Target mAP: ≥ 0.31 (match or exceed vanilla RT-DETR)
 - 📊 Expected: ~5-10% improvement (less than conditional due to all-image de-raining)
 
+### Adapted SPDNet (Feature-Based Adaptation)
+- ✅ mAP: 0.355 (+4.1% vs baseline)
+- ✅ AP50: 0.507 (+5.0% vs baseline)
+- ✅ Outperforms Original SPDNet (0.337 mAP)
+
 ### Baseline (Vanilla RT-DETR on Rainy COCO)
-- Current: mAP ≈ 0.306
-- AP @ IoU=0.50: ≈ 0.437
-- AP @ IoU=0.75: ≈ 0.327
+- Current: mAP ≈ 0.341
+- AP @ IoU=0.50: ≈ 0.483
+- AP @ IoU=0.75: ≈ 0.366
 
 ## Component Integration Patterns
 
@@ -300,6 +305,15 @@ outputs = model(**processed)
   - `forward()`: SPDNet(image) → RT-DETR(de-rained)
   - **KEY FIX**: Scales input to [0, 255], scales output back to [0, 1]
   - Single forward pass (eliminates two-stage bottleneck)
+
+- **`Training_SPDNet_Lightweight.py`**: ⭐ **SPDNet Adaptation** - Feature-based fine-tuning
+  - Trains SPDNet to preserve detection features
+  - Uses lightweight feature extractor and 320x320 resolution
+  - Output: `outputs_spdnet_feature_adaptation/spdnet_adapted_best.pt`
+
+- **`Eval_Adapted_SPDNet.py`**: Evaluation for adapted model
+  - Compares Vanilla, Original SPDNet, and Adapted SPDNet
+  - Computes COCO mAP and simple metrics
 
 - **`eval_utils.py`**: Evaluation and metrics
   - `generate_predictions()`: Batch inference + COCO format
