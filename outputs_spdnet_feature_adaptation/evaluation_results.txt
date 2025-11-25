@@ -1,0 +1,33 @@
+Evaluation Results
+================================================================================
+
+vanilla:
+  precision: 0.8743532883412022
+  recall: 0.3123020062533522
+  f1: 0.46022135873213493
+  total_detections: 1353
+  total_gt: 3788
+  tp: 1183
+  fp: 170
+  fn: 2605
+
+original_spdnet:
+  precision: 0.8639356248252116
+  recall: 0.3117740231489509
+  f1: 0.4581955363891171
+  total_detections: 1367
+  total_gt: 3788
+  tp: 1181
+  fp: 186
+  fn: 2607
+
+adapted_spdnet:
+  precision: 0.872370265867903
+  recall: 0.32840549093759097
+  f1: 0.4771764340340447
+  total_detections: 1426
+  total_gt: 3788
+  tp: 1244
+  fp: 182
+  fn: 2544
+
