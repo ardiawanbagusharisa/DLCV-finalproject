@@ -36,6 +36,9 @@ clean_images = torch.clamp(derain_output / 255.0, 0, 1)  # Scale DOWN for RT-DET
 & E:\Python\DLCV\.venv\Scripts\Activate.ps1  # ALWAYS activate first
 ```
 
+## ⚠️ Critical Scripting Rules
+- **NEVER use `Start-Sleep`**: When waiting for a script or process, do NOT use `Start-Sleep` as it triggers keyboard interrupts in some environments. Instead, use a proper wait mechanism or just let the script finish naturally.
+
 ## Key Scripts
 
 | Script | Purpose |
