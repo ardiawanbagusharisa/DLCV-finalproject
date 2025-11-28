@@ -82,8 +82,8 @@ Object detection models (like RT-DETR) suffer significant accuracy drops in rain
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/feature-derain-rtdetr.git
-cd feature-derain-rtdetr
+git clone https://github.com/machiningman/Project-DLCV.git
+cd Project-DLCV
 
 # Create virtual environment
 python -m venv .venv
