@@ -9,7 +9,7 @@ Usage:
     python inference.py --image path/to/image.jpg
     python inference.py --image path/to/image.jpg --output results/
     python inference.py --image path/to/image.jpg --threshold 0.5 --save
-    python inference.py --image path/to/image.jpg --compare  # 3-panel: GT, Vanilla, Ours
+    python inference.py --image path/to/image.jpg --compare  # 4-panel: GT, Vanilla, SPDNet+RTDETR, Ours
 """
 
 import warnings
@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from transformers import RTDetrImageProcessor, RTDetrForObjectDetection
 from utils.feature_derain import FeatureDerainRTDETR
+from utils.spdnet_utils import load_spdnet_model, derain_image
 
 
 # =============================================================================
@@ -40,6 +41,7 @@ from utils.feature_derain import FeatureDerainRTDETR
 MODEL_NAME = "PekingU/rtdetr_r18vd"
 DERAIN_TYPE = "multiscale"
 CHECKPOINT_PATH = "./outputs_feature_derain/feature_derain_best.pt"
+SPDNET_PATH = "./model_spa.pt"  # SPDNet checkpoint for baseline comparison
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # MixedRain dataset paths
@@ -70,7 +72,8 @@ COLORS = [(np.random.randint(50, 255), np.random.randint(50, 255), np.random.ran
 # Fixed colors for GT/Predictions
 GT_COLOR = (0, 255, 0)  # Green
 VANILLA_COLOR = (255, 0, 0)  # Red  
-DERAIN_COLOR = (0, 100, 255)  # Blue
+SPDNET_COLOR = (255, 165, 0)  # Orange - for SPDNet+RTDETR
+DERAIN_COLOR = (0, 100, 255)  # Blue - for Feature De-rain (Ours)
 
 
 # =============================================================================
@@ -158,6 +161,29 @@ def load_vanilla_model(device: str = "cuda"):
     model = model.to(device)
     model.eval()
     return model
+
+
+def load_spdnet_for_comparison(device: str = "cuda"):
+    """
+    Load SPDNet model for image de-raining (baseline comparison).
+    
+    Note: SPDNet has hardcoded CUDA calls, so it requires a GPU.
+    """
+    if not torch.cuda.is_available():
+        print("⚠ SPDNet requires CUDA. Skipping SPDNet comparison.")
+        return None
+    
+    if not os.path.exists(SPDNET_PATH):
+        print(f"⚠ SPDNet model not found at {SPDNET_PATH}. Skipping SPDNet comparison.")
+        return None
+    
+    try:
+        print(f"Loading SPDNet from: {SPDNET_PATH}")
+        spdnet_model = load_spdnet_model(SPDNET_PATH, device=device)
+        return spdnet_model
+    except Exception as e:
+        print(f"⚠ Failed to load SPDNet: {e}")
+        return None
 
 
 # =============================================================================
@@ -348,17 +374,21 @@ def create_side_by_side_comparison(
     image_path: str,
     vanilla_results: dict,
     derain_results: dict,
+    spdnet_results: dict = None,
+    spdnet_derained_image: Image.Image = None,
     gt_annotations: list = None,
     output_path: str = None,
     show: bool = True
 ):
     """
-    Create a 3-panel comparison image: GT | Vanilla | Feature De-rain.
+    Create a 4-panel comparison image: GT | Vanilla | SPDNet+RT-DETR (derained) | Feature De-rain (Ours).
     
     Args:
         image_path: Path to original image
         vanilla_results: Results from vanilla RT-DETR
         derain_results: Results from Feature De-rain RT-DETR
+        spdnet_results: Results from SPDNet + RT-DETR (optional)
+        spdnet_derained_image: The derained image from SPDNet (shown as background for panel 3)
         gt_annotations: Ground truth annotations (YOLO format dicts)
         output_path: Path to save comparison image
         show: Whether to display the image
@@ -402,8 +432,8 @@ def create_side_by_side_comparison(
     # Panel 2: Vanilla RT-DETR
     panel2 = original.copy()
     draw2 = ImageDraw.Draw(panel2)
-    title2 = f"Vanilla RT-DETR ({len(vanilla_results['boxes'])} detections)"
-    draw2.rectangle([5, 5, 320, 35], fill='black')
+    title2 = f"Vanilla RT-DETR ({len(vanilla_results['boxes'])} det)"
+    draw2.rectangle([5, 5, 280, 35], fill='black')
     draw2.text((10, 10), title2, fill='white', font=title_font)
     
     for box, score, label in zip(vanilla_results['boxes'], vanilla_results['scores'], vanilla_results['labels']):
@@ -415,53 +445,91 @@ def create_side_by_side_comparison(
         draw2.rectangle([text_bbox[0]-1, text_bbox[1]-1, text_bbox[2]+1, text_bbox[3]+1], fill=VANILLA_COLOR)
         draw2.text((x1, y1-18), text, fill='white', font=font)
     
-    # Panel 3: Feature De-rain RT-DETR
-    panel3 = original.copy()
-    draw3 = ImageDraw.Draw(panel3)
-    title3 = f"Feature De-rain (Ours) ({len(derain_results['boxes'])} detections)"
-    draw3.rectangle([5, 5, 350, 35], fill='black')
-    draw3.text((10, 10), title3, fill='white', font=title_font)
+    # Panel 3: SPDNet + RT-DETR (showing derained image as background)
+    if spdnet_results is not None and spdnet_derained_image is not None:
+        # Use the SPDNet derained image as background (resized to match original)
+        panel3 = spdnet_derained_image.copy()
+        if panel3.size != (width, height):
+            panel3 = panel3.resize((width, height), Image.LANCZOS)
+        draw3 = ImageDraw.Draw(panel3)
+        title3 = f"SPDNet+RT-DETR ({len(spdnet_results['boxes'])} det)"
+        draw3.rectangle([5, 5, 280, 35], fill='black')
+        draw3.text((10, 10), title3, fill='white', font=title_font)
+        
+        for box, score, label in zip(spdnet_results['boxes'], spdnet_results['scores'], spdnet_results['labels']):
+            x1, y1, x2, y2 = box
+            class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+            draw3.rectangle([x1, y1, x2, y2], outline=SPDNET_COLOR, width=3)
+            text = f"{class_name}:{score:.2f}"
+            text_bbox = draw3.textbbox((x1, y1-18), text, font=font)
+            draw3.rectangle([text_bbox[0]-1, text_bbox[1]-1, text_bbox[2]+1, text_bbox[3]+1], fill=SPDNET_COLOR)
+            draw3.text((x1, y1-18), text, fill='black', font=font)
+    else:
+        # SPDNet not available - show placeholder
+        panel3 = original.copy()
+        draw3 = ImageDraw.Draw(panel3)
+        title3 = "SPDNet+RT-DETR (N/A)"
+        draw3.rectangle([5, 5, 280, 35], fill='black')
+        draw3.text((10, 10), title3, fill='white', font=title_font)
+        draw3.text((width//2-100, height//2), "SPDNet unavailable", fill='orange', font=title_font)
+    
+    # Panel 4: Feature De-rain RT-DETR (Ours)
+    panel4 = original.copy()
+    draw4 = ImageDraw.Draw(panel4)
+    title4 = f"Feature De-rain (Ours) ({len(derain_results['boxes'])} det)"
+    draw4.rectangle([5, 5, 330, 35], fill='black')
+    draw4.text((10, 10), title4, fill='white', font=title_font)
     
     for box, score, label in zip(derain_results['boxes'], derain_results['scores'], derain_results['labels']):
         x1, y1, x2, y2 = box
         class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
-        draw3.rectangle([x1, y1, x2, y2], outline=DERAIN_COLOR, width=3)
+        draw4.rectangle([x1, y1, x2, y2], outline=DERAIN_COLOR, width=3)
         text = f"{class_name}:{score:.2f}"
-        text_bbox = draw3.textbbox((x1, y1-18), text, font=font)
-        draw3.rectangle([text_bbox[0]-1, text_bbox[1]-1, text_bbox[2]+1, text_bbox[3]+1], fill=DERAIN_COLOR)
-        draw3.text((x1, y1-18), text, fill='white', font=font)
+        text_bbox = draw4.textbbox((x1, y1-18), text, font=font)
+        draw4.rectangle([text_bbox[0]-1, text_bbox[1]-1, text_bbox[2]+1, text_bbox[3]+1], fill=DERAIN_COLOR)
+        draw4.text((x1, y1-18), text, fill='white', font=font)
     
-    # Create 3-panel image
+    # Create 4-panel image (2x2 layout)
     gap = 10
-    combined_width = width * 3 + gap * 2
-    combined_height = height + 80
+    combined_width = width * 2 + gap
+    combined_height = height * 2 + gap + 80  # Extra space for header and legend
     combined = Image.new('RGB', (combined_width, combined_height), color='white')
     
     # Draw header
     draw = ImageDraw.Draw(combined)
-    header_text = "Comparison: Ground Truth | Vanilla RT-DETR | Feature De-rain (Ours)"
+    header_text = "Model Comparison: GT | Vanilla | SPDNet+RT-DETR | Feature De-rain (Ours)"
     header_bbox = draw.textbbox((0, 0), header_text, font=header_font)
     header_x = (combined_width - (header_bbox[2] - header_bbox[0])) // 2
     draw.text((header_x, 10), header_text, fill='black', font=header_font)
     
-    # Paste panels
+    # Paste panels in 2x2 grid
     y_offset = 50
-    combined.paste(panel1, (0, y_offset))
-    combined.paste(panel2, (width + gap, y_offset))
-    combined.paste(panel3, (width * 2 + gap * 2, y_offset))
+    combined.paste(panel1, (0, y_offset))                          # Top-left: GT
+    combined.paste(panel2, (width + gap, y_offset))                # Top-right: Vanilla
+    combined.paste(panel3, (0, y_offset + height + gap))           # Bottom-left: SPDNet
+    combined.paste(panel4, (width + gap, y_offset + height + gap)) # Bottom-right: Ours
     
     # Draw separator lines
-    draw.line([(width + gap//2, y_offset), (width + gap//2, y_offset + height)], fill='gray', width=2)
-    draw.line([(width*2 + gap + gap//2, y_offset), (width*2 + gap + gap//2, y_offset + height)], fill='gray', width=2)
+    # Vertical line
+    draw.line([(width + gap//2, y_offset), (width + gap//2, y_offset + height * 2 + gap)], fill='gray', width=2)
+    # Horizontal line
+    draw.line([(0, y_offset + height + gap//2), (combined_width, y_offset + height + gap//2)], fill='gray', width=2)
     
-    # Draw legend
+    # Draw legend at bottom
     legend_y = combined_height - 25
+    legend_spacing = combined_width // 4
+    
     draw.rectangle([10, legend_y, 30, legend_y + 15], fill=GT_COLOR)
     draw.text((35, legend_y), "Ground Truth", fill='black', font=font)
-    draw.rectangle([200, legend_y, 220, legend_y + 15], fill=VANILLA_COLOR)
-    draw.text((225, legend_y), "Vanilla RT-DETR", fill='black', font=font)
-    draw.rectangle([420, legend_y, 440, legend_y + 15], fill=DERAIN_COLOR)
-    draw.text((445, legend_y), "Feature De-rain (Ours)", fill='black', font=font)
+    
+    draw.rectangle([legend_spacing, legend_y, legend_spacing + 20, legend_y + 15], fill=VANILLA_COLOR)
+    draw.text((legend_spacing + 25, legend_y), "Vanilla RT-DETR", fill='black', font=font)
+    
+    draw.rectangle([legend_spacing * 2, legend_y, legend_spacing * 2 + 20, legend_y + 15], fill=SPDNET_COLOR)
+    draw.text((legend_spacing * 2 + 25, legend_y), "SPDNet+RT-DETR", fill='black', font=font)
+    
+    draw.rectangle([legend_spacing * 3, legend_y, legend_spacing * 3 + 20, legend_y + 15], fill=DERAIN_COLOR)
+    draw.text((legend_spacing * 3 + 25, legend_y), "Ours", fill='black', font=font)
     
     # Save if path provided
     if output_path:
@@ -484,7 +552,7 @@ def compare_models(
     show: bool = True
 ):
     """
-    Compare Feature De-rain model with Vanilla RT-DETR, including Ground Truth.
+    Compare Feature De-rain model with Vanilla RT-DETR and SPDNet+RT-DETR, including Ground Truth.
     
     Args:
         image_path: Path to the input image
@@ -496,7 +564,7 @@ def compare_models(
     processor = RTDetrImageProcessor.from_pretrained(MODEL_NAME)
     
     print("\n" + "=" * 80)
-    print("Model Comparison: GT | Vanilla | Feature De-rain (Ours)")
+    print("Model Comparison: GT | Vanilla | SPDNet+RT-DETR | Feature De-rain (Ours)")
     print("=" * 80)
     
     # Try to load ground truth from MixedRain labels
@@ -517,21 +585,78 @@ def compare_models(
     print("\nLoading models...")
     vanilla_model = load_vanilla_model(device)
     derain_model = load_model(CHECKPOINT_PATH, device)
+    spdnet_model = load_spdnet_for_comparison(device)
     
-    # Run inference with both models
+    # Run inference with Vanilla RT-DETR
     print("\n--- Vanilla RT-DETR ---")
     vanilla_results = run_inference(
         vanilla_model, processor, image_path, 
         device, confidence_threshold
     )
     print(f"Detections: {len(vanilla_results['boxes'])}")
+    print(f"Inference time: {vanilla_results['inference_time']:.2f} ms")
     
+    # Run inference with SPDNet + RT-DETR (if available)
+    spdnet_results = None
+    spdnet_derained_image = None
+    if spdnet_model is not None:
+        print("\n--- SPDNet + RT-DETR ---")
+        # First, de-rain the image with SPDNet
+        original_image = Image.open(image_path).convert('RGB')
+        
+        # SPDNet expects [0, 255] range
+        start_time = time.time()
+        spdnet_derained_image = derain_image(original_image, spdnet_model, device=device)
+        derain_time = (time.time() - start_time) * 1000
+        print(f"SPDNet de-raining time: {derain_time:.2f} ms")
+        
+        # Now run RT-DETR on the derained image
+        # Save temporarily to file or process directly
+        # Process derained image through RT-DETR
+        inputs = processor(images=spdnet_derained_image, return_tensors="pt")
+        pixel_values = inputs['pixel_values'].to(device)
+        
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        
+        start_time = time.time()
+        outputs = vanilla_model(pixel_values=pixel_values)
+        
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        
+        rtdetr_time = (time.time() - start_time) * 1000
+        
+        # Post-process results
+        original_size = original_image.size  # (width, height)
+        target_sizes = torch.tensor([original_size[::-1]]).to(device)  # (height, width)
+        results = processor.post_process_object_detection(
+            outputs, 
+            target_sizes=target_sizes,
+            threshold=confidence_threshold
+        )[0]
+        
+        spdnet_results = {
+            'boxes': results['boxes'].detach().cpu().numpy(),
+            'scores': results['scores'].detach().cpu().numpy(),
+            'labels': results['labels'].detach().cpu().numpy(),
+            'inference_time': derain_time + rtdetr_time,
+            'original_size': original_size
+        }
+        print(f"Detections: {len(spdnet_results['boxes'])}")
+        print(f"Total time (SPDNet + RT-DETR): {spdnet_results['inference_time']:.2f} ms")
+    else:
+        print("\n--- SPDNet + RT-DETR ---")
+        print("⚠ SPDNet not available (requires CUDA)")
+    
+    # Run inference with Feature De-rain RT-DETR (Ours)
     print("\n--- Feature De-rain RT-DETR (Ours) ---")
     derain_results = run_inference(
         derain_model, processor, image_path, 
         device, confidence_threshold
     )
     print(f"Detections: {len(derain_results['boxes'])}")
+    print(f"Inference time: {derain_results['inference_time']:.2f} ms")
     
     # Print detailed results
     print("\n" + "-" * 40)
@@ -540,13 +665,19 @@ def compare_models(
         class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
         print(f"  [{i+1}] {class_name}: {score:.3f}")
     
+    if spdnet_results is not None:
+        print("\nSPDNet + RT-DETR Detections:")
+        for i, (box, score, label) in enumerate(zip(spdnet_results['boxes'], spdnet_results['scores'], spdnet_results['labels'])):
+            class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+            print(f"  [{i+1}] {class_name}: {score:.3f}")
+    
     print("\nFeature De-rain (Ours) Detections:")
     for i, (box, score, label) in enumerate(zip(derain_results['boxes'], derain_results['scores'], derain_results['labels'])):
         class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
         print(f"  [{i+1}] {class_name}: {score:.3f}")
     print("-" * 40)
     
-    # Create 3-panel comparison visualization
+    # Create 4-panel comparison visualization
     output_path = None
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -555,11 +686,13 @@ def compare_models(
     
     create_side_by_side_comparison(
         image_path, vanilla_results, derain_results,
+        spdnet_results=spdnet_results,
+        spdnet_derained_image=spdnet_derained_image,
         gt_annotations=gt_annotations,
         output_path=output_path, show=show
     )
     
-    return vanilla_results, derain_results
+    return vanilla_results, spdnet_results, derain_results
 
 
 # =============================================================================
