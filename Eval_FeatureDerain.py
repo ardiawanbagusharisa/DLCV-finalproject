@@ -44,7 +44,7 @@ from utils.eval_utils import evaluate_coco, generate_predictions
 # Paths
 COCO_RAIN_DIR = "E:/Python/DLCV/dataset/coco_rain"
 OUTPUT_DIR = "./outputs_feature_derain"
-CHECKPOINT_PATH = "./outputs_feature_derain/feature_derain_best.pt"
+CHECKPOINT_PATH = "./outputs_feature_derain/coco-rain_0.3/feature_derain_best.pt"
 
 # Model
 MODEL_NAME = "PekingU/rtdetr_r18vd"

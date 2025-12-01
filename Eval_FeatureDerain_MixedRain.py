@@ -71,7 +71,7 @@ MIXEDRAIN_DIR = "E:/Python/DLCV/mixedrain"
 LABELS_FILE = os.path.join(MIXEDRAIN_DIR, "labels.txt")
 
 # Model paths
-FEATURE_DERAIN_CHECKPOINT = "./outputs_feature_derain/feature_derain_best.pt"
+FEATURE_DERAIN_CHECKPOINT = "./outputs_feature_derain/coco-rain_0.3-full/feature_derain_best.pt"
 ORIGINAL_SPDNET_PATH = "./model_spa.pt"  # Original SPDNet weights
 RTDETR_MODEL_NAME = "PekingU/rtdetr_r18vd"
 NUM_LABELS = 80

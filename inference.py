@@ -40,7 +40,7 @@ from utils.spdnet_utils import load_spdnet_model, derain_image
 
 MODEL_NAME = "PekingU/rtdetr_r18vd"
 DERAIN_TYPE = "multiscale"
-CHECKPOINT_PATH = "./outputs_feature_derain/feature_derain_best.pt"
+CHECKPOINT_PATH = "./outputs_feature_derain/coco-rain_0.3-full/feature_derain_best.pt"
 SPDNET_PATH = "./model_spa.pt"  # SPDNet checkpoint for baseline comparison
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -272,7 +272,7 @@ def visualize_detections(
     
     # Try to load a font, fall back to default
     try:
-        font = ImageFont.truetype("arial.ttf", 16)
+        font = ImageFont.truetype("arial.ttf", 32)
     except:
         font = ImageFont.load_default()
     
@@ -333,8 +333,8 @@ def draw_detections_on_image(image: Image.Image, results: dict, title: str = Non
     
     # Try to load fonts
     try:
-        font = ImageFont.truetype("arial.ttf", 16)
-        title_font = ImageFont.truetype("arial.ttf", 24)
+        font = ImageFont.truetype("arial.ttf", 32)
+        title_font = ImageFont.truetype("arial.ttf", 48)
     except:
         font = ImageFont.load_default()
         title_font = font
@@ -401,9 +401,9 @@ def create_side_by_side_comparison(
     width, height = original.size
     
     try:
-        font = ImageFont.truetype("arial.ttf", 14)
-        title_font = ImageFont.truetype("arial.ttf", 18)
-        header_font = ImageFont.truetype("arial.ttf", 24)
+        font = ImageFont.truetype("arial.ttf", 32)
+        title_font = ImageFont.truetype("arial.ttf", 48)
+        header_font = ImageFont.truetype("arial.ttf", 48)
     except:
         font = ImageFont.load_default()
         title_font = font
@@ -414,7 +414,7 @@ def create_side_by_side_comparison(
     draw1 = ImageDraw.Draw(panel1)
     n_gt = len(gt_annotations) if gt_annotations else 0
     title1 = f"Ground Truth ({n_gt} objects)"
-    draw1.rectangle([5, 5, 280, 35], fill='black')
+    draw1.rectangle([5, 5, 280*2, 35*2], fill='black')
     draw1.text((10, 10), title1, fill='white', font=title_font)
     
     if gt_annotations:
@@ -433,7 +433,7 @@ def create_side_by_side_comparison(
     panel2 = original.copy()
     draw2 = ImageDraw.Draw(panel2)
     title2 = f"Vanilla RT-DETR ({len(vanilla_results['boxes'])} det)"
-    draw2.rectangle([5, 5, 280, 35], fill='black')
+    draw2.rectangle([5, 5, 280*2, 35*2], fill='black')
     draw2.text((10, 10), title2, fill='white', font=title_font)
     
     for box, score, label in zip(vanilla_results['boxes'], vanilla_results['scores'], vanilla_results['labels']):
@@ -453,7 +453,7 @@ def create_side_by_side_comparison(
             panel3 = panel3.resize((width, height), Image.LANCZOS)
         draw3 = ImageDraw.Draw(panel3)
         title3 = f"SPDNet+RT-DETR ({len(spdnet_results['boxes'])} det)"
-        draw3.rectangle([5, 5, 280, 35], fill='black')
+        draw3.rectangle([5, 5, 280*2, 35*2], fill='black')
         draw3.text((10, 10), title3, fill='white', font=title_font)
         
         for box, score, label in zip(spdnet_results['boxes'], spdnet_results['scores'], spdnet_results['labels']):
@@ -477,7 +477,7 @@ def create_side_by_side_comparison(
     panel4 = original.copy()
     draw4 = ImageDraw.Draw(panel4)
     title4 = f"Feature De-rain (Ours) ({len(derain_results['boxes'])} det)"
-    draw4.rectangle([5, 5, 330, 35], fill='black')
+    draw4.rectangle([5, 5, 330*2, 35*2], fill='black')
     draw4.text((10, 10), title4, fill='white', font=title_font)
     
     for box, score, label in zip(derain_results['boxes'], derain_results['scores'], derain_results['labels']):

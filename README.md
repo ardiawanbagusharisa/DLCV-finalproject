@@ -60,21 +60,13 @@ Object detection models (like RT-DETR) suffer significant accuracy drops in rain
 
 ## 📊 Results
 
-### COCO-Rain Evaluation
+### Real Rain Dataset
 
-| Model | mAP | AP50 | Latency |
-|-------|-----|------|---------|
-| Vanilla RT-DETR | 34.1% | 48.3% | 25ms |
-| SPDNet + RT-DETR | 33.7% | 48.3% | 205ms |
-| **Feature De-rain (Ours)** | **34.9%** | **49.1%** | **28ms** |
-
-### MixedRain Dataset
-
-| Model | mAP | AP50 | Notes |
-|-------|-----|------|-------|
-| Vanilla RT-DETR | 25.69% | 44.56% | Baseline |
-| SPDNet + RT-DETR | 24.03% | 42.94% | Pixel-level |
-| **Feature De-rain (Ours)** | **26.47%** | **45.73%** | +3.0% over vanilla |
+| Model | mAP | AP50 | AP75 | Latency | Notes |
+|-------|-----|------|------|---------|-------|
+| Vanilla RT-DETR | 40.50% | 51.90% | 45.84% | 15.3ms | Baseline |
+| SPDNet + RT-DETR | 42.21% | 53.73% | 47.18% | 244.2ms | Pixel-level |
+| **Feature De-rain (Ours)** | **41.27%** | **52.20%** | **44.09%** | **21.0ms** | Balanced |
 
 ## 🚀 Quick Start
 
