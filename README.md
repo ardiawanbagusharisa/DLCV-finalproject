@@ -8,6 +8,7 @@ A novel approach to rain-robust object detection that operates at the **feature 
 
 ## 📹 Demo
 
+https://github.com/user-attachments/assets/f706c62e-ca4b-4d12-8d0a-3ffe0b355ce9
 
 ## 📋 Overview
 
