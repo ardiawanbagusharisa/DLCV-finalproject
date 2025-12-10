@@ -186,16 +186,3 @@ python video_inference.py --video path/to/video.mp4 --start 300 --end 420
 # Custom output path and threshold
 python video_inference.py --video path/to/video.mp4 --output my_result.mp4 --threshold 0.6
 ```
-
-## Citation
-
-If you find this work useful, please cite:
-
-```bibtex
-@misc{feature-derain-rtdetr,
-  title={Feature-Level De-raining for Robust Object Detection},
-  author={Andi Alfian Kartika Aji},
-  year={2025},
-  url={https://github.com/machiningman/Project-DLCV}
-}
-```
