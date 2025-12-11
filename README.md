@@ -159,3 +159,5 @@ python video_inference.py --video path/to/video.mp4 --start 300 --end 420
 # Custom output path and threshold
 python video_inference.py --video path/to/video.mp4 --output my_result.mp4 --threshold 0.6
 ```
+> [!NOTE]
+> This project is heavily done by utilizing AI tool. Take it on your own risk. 
